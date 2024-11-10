@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -18,7 +19,14 @@ class HelloWorldController extends Controller
      */
     public function index()
     {
-        //todo
+        // Obtén la lista de archivos del almacenamiento local
+        $files = Storage::disk('local')->files();
+
+        // Devuelve la respuesta en formato JSON con los archivos encontrados
+        return response()->json([
+            'mensaje' => 'Listado de ficheros',
+            'contenido' => $files,
+        ]);
     }
 
      /**
@@ -32,9 +40,31 @@ class HelloWorldController extends Controller
      * El JSON devuelto debe tener las siguientes claves:
      * - mensaje: Un mensaje indicando el resultado de la operación.
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        //todo
+        // Validar que los parámetros filename y content están presentes en la solicitud
+        $request->validate([
+            'filename' => 'required|string',
+            'content' => 'required|string',
+        ]);
+
+        $filename = $request->input('filename');
+        $content = $request->input('content');
+
+        // Verificar si el archivo ya existe
+        if (Storage::disk('local')->exists($filename)) {
+            return response()->json([
+                'mensaje' => 'El archivo ya existe',
+            ], 409); // HTTP 409 Conflict
+        }
+
+        // Crear el archivo con el contenido proporcionado
+        Storage::disk('local')->put($filename, $content);
+
+        // Responder con éxito con código 200 y el mensaje esperado
+        return response()->json([
+            'mensaje' => 'Guardado con éxito',
+        ], 200); // HTTP 200 OK
     }
 
      /**
@@ -47,9 +77,23 @@ class HelloWorldController extends Controller
      * - mensaje: Un mensaje indicando el resultado de la operación.
      * - contenido: El contenido del fichero si se ha leído con éxito.
      */
-    public function show(string $filename)
+    public function show(string $filename): JsonResponse
     {
-        //todo
+        // Verificar si el archivo existe
+        if (!Storage::disk('local')->exists($filename)) {
+            return response()->json([
+                'mensaje' => 'Archivo no encontrado',
+            ], 404); // HTTP 404 Not Found
+        }
+
+        // Obtener el contenido del archivo
+        $content = Storage::disk('local')->get($filename);
+
+        // Responder con éxito y el contenido del archivo
+        return response()->json([
+            'mensaje' => 'Archivo leído con éxito',
+            'contenido' => $content,
+        ], 200); // HTTP 200 OK
     }
 
     /**
@@ -64,9 +108,27 @@ class HelloWorldController extends Controller
      * El JSON devuelto debe tener las siguientes claves:
      * - mensaje: Un mensaje indicando el resultado de la operación.
      */
-    public function update(Request $request, string $filename)
+    public function update(Request $request, string $filename): JsonResponse
     {
-        //todo
+        // Validar que el parámetro content está presente
+        $request->validate([
+            'content' => 'required|string',
+        ]);
+
+        // Verificar si el archivo existe
+        if (!Storage::disk('local')->exists($filename)) {
+            return response()->json([
+                'mensaje' => 'El archivo no existe',
+            ], 404); // HTTP 404 Not Found
+        }
+
+        // Sobreescribir el contenido del archivo
+        Storage::disk('local')->put($filename, $request->input('content'));
+
+        // Responder con éxito
+        return response()->json([
+            'mensaje' => 'Actualizado con éxito',
+        ], 200); // HTTP 200 OK
     }
 
     /**
@@ -79,8 +141,21 @@ class HelloWorldController extends Controller
      * El JSON devuelto debe tener las siguientes claves:
      * - mensaje: Un mensaje indicando el resultado de la operación.
      */
-    public function destroy(string $filename)
+    public function destroy(string $filename): JsonResponse
     {
-        //todo
+        // Verificar si el archivo existe
+        if (!Storage::disk('local')->exists($filename)) {
+            return response()->json([
+                'mensaje' => 'El archivo no existe',
+            ], 404); // HTTP 404 Not Found
+        }
+
+        // Eliminar el archivo
+        Storage::disk('local')->delete($filename);
+
+        // Responder con éxito
+        return response()->json([
+            'mensaje' => 'Eliminado con éxito',
+        ], 200); // HTTP 200 OK
     }
 }
